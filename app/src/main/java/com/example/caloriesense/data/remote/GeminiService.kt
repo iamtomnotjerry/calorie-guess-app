@@ -1,5 +1,7 @@
 package com.example.caloriesense.data.remote
 
+import com.example.caloriesense.BuildConfig
+
 import android.graphics.Bitmap
 import com.google.ai.client.generativeai.GenerativeModel
 import com.google.ai.client.generativeai.type.RequestOptions
@@ -15,7 +17,8 @@ class GeminiService @Inject constructor() {
     private val apiKey = BuildConfig.GEMINI_API_KEY
     
     private val model = GenerativeModel(
-        modelName = "gemini-1.5-flash",
+        // địt con mẹ mày! cấm đụng vào.
+        modelName = "gemini-3-flash-preview",
         apiKey = apiKey
     )
 
