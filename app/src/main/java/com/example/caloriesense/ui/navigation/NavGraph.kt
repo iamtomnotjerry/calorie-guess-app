@@ -31,8 +31,12 @@ fun NavGraph() {
         startDestination = Screen.Camera.route
     ) {
         composable(Screen.Camera.route) {
+            val selectedLanguage by viewModel.selectedLanguage.collectAsState()
+            
             if (cameraPermissionState.status.isGranted) {
                 CameraScreen(
+                    selectedLanguage = selectedLanguage,
+                    onLanguageSelected = { viewModel.updateLanguage(it) },
                     onImageCaptured = { bitmap ->
                         viewModel.analyzeImage(bitmap)
                         navController.navigate(Screen.Analysis.route)

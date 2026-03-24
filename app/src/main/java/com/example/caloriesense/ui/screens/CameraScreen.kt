@@ -2,8 +2,14 @@ package com.example.caloriesense.ui.screens
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.ImageDecoder
 import android.graphics.Matrix
+import android.net.Uri
+import android.os.Build
+import android.provider.MediaStore
 import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
@@ -12,6 +18,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,8 +36,11 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CameraScreen(
+    selectedLanguage: String,
+    onLanguageSelected: (String) -> Unit,
     onImageCaptured: (Bitmap) -> Unit
 ) {
     val context = LocalContext.current
@@ -41,6 +51,31 @@ fun CameraScreen(
     val imageCapture = remember { ImageCapture.Builder().build() }
     // Sử dụng background executor để xử lý ảnh
     val cameraExecutor = remember { Dispatchers.Default.asExecutor() }
+
+    val galleryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            scope.launch(Dispatchers.IO) {
+                try {
+                    val bitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                        val source = ImageDecoder.createSource(context.contentResolver, it)
+                        ImageDecoder.decodeBitmap(source) { decoder, _, _ ->
+                            decoder.isMutableRequired = true
+                        }
+                    } else {
+                        MediaStore.Images.Media.getBitmap(context.contentResolver, it)
+                    }
+                    
+                    withContext(Dispatchers.Main) {
+                        onImageCaptured(bitmap)
+                    }
+                } catch (e: Exception) {
+                    Log.e("Camera", "Failed to load image from gallery", e)
+                }
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         val cameraProvider = context.getCameraProvider()
@@ -100,6 +135,39 @@ fun CameraScreen(
                 .background(Color.White.copy(alpha = 0.5f), CircleShape)
         ) {
             Icon(Icons.Default.CameraAlt, contentDescription = "Capture", modifier = Modifier.size(40.dp))
+        }
+
+        IconButton(
+            onClick = { galleryLauncher.launch("image/*") },
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(bottom = 60.dp, start = 48.dp)
+                .size(56.dp)
+                .background(Color.White.copy(alpha = 0.5f), CircleShape)
+        ) {
+            Icon(Icons.Default.PhotoLibrary, contentDescription = "Gallery", modifier = Modifier.size(28.dp))
+        }
+
+        // Language selection
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 48.dp)
+                .align(Alignment.TopCenter),
+            horizontalArrangement = Arrangement.Center
+        ) {
+            listOf("Tiếng Việt", "English", "日本語", "한국어").forEach { language ->
+                FilterChip(
+                    selected = selectedLanguage == language,
+                    onClick = { onLanguageSelected(language) },
+                    label = { Text(language) },
+                    modifier = Modifier.padding(horizontal = 4.dp),
+                    colors = FilterChipDefaults.filterChipColors(
+                        containerColor = Color.White.copy(alpha = 0.3f),
+                        selectedContainerColor = MaterialTheme.colorScheme.primaryContainer
+                    )
+                )
+            }
         }
     }
 }

@@ -25,11 +25,18 @@ class AnalysisViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<AnalysisState>(AnalysisState.Idle)
     val uiState = _uiState.asStateFlow()
 
+    private val _selectedLanguage = MutableStateFlow("Tiếng Việt")
+    val selectedLanguage = _selectedLanguage.asStateFlow()
+
+    fun updateLanguage(language: String) {
+        _selectedLanguage.value = language
+    }
+
     fun analyzeImage(bitmap: Bitmap) {
         viewModelScope.launch {
             _uiState.value = AnalysisState.Loading
             try {
-                val result = geminiService.analyzeFoodImage(bitmap)
+                val result = geminiService.analyzeFoodImage(bitmap, _selectedLanguage.value)
                 _uiState.value = AnalysisState.Success(result)
             } catch (e: Exception) {
                 _uiState.value = AnalysisState.Error(e.localizedMessage ?: "Unknown error")
